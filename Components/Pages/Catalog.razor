@@ -1,0 +1,116 @@
+@page "/catalog"
+@inject IProductRepository ProductRepo
+@inject ICategoryRepository CategoryRepo
+@inject NavigationManager Nav
+
+<PageTitle>Каталог букетов — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    <header class="page-head">
+        <h1 class="page-head__title">Каталог букетов</h1>
+        <p class="page-head__lead">Выберите настроение — мы подберём цветы.</p>
+    </header>
+
+    <div class="catalog">
+        <aside class="catalog__sidebar">
+            <div class="filter">
+                <h2 class="filter__title">Категории</h2>
+                <ul class="filter__list">
+                    <li>
+                        <button type="button"
+                                class="filter__btn @(SelectedCategory is null ? "filter__btn--active" : null)"
+                                @onclick="@(() => Filter(null))">
+                            Все
+                        </button>
+                    </li>
+                    @if (_categories is not null)
+                    {
+                        @foreach (var c in _categories)
+                        {
+                            <li>
+                                <button type="button"
+                                        class="filter__btn @(SelectedCategory == c.Slug ? "filter__btn--active" : null)"
+                                        @onclick="@(() => Filter(c.Slug))">
+                                    <span aria-hidden="true">@c.IconEmoji</span>
+                                    @c.Name
+                                </button>
+                            </li>
+                        }
+                    }
+                </ul>
+            </div>
+
+            <div class="filter">
+                <h2 class="filter__title">Поиск</h2>
+                <input class="input" type="search" placeholder="например: пион"
+                       value="@_search" @oninput="OnSearchInput" />
+            </div>
+        </aside>
+
+        <div class="catalog__main">
+            @if (_products is null)
+            {
+                <p class="muted">Загружаем каталог…</p>
+            }
+            else if (_products.Count == 0)
+            {
+                <div class="empty">
+                    <p class="empty__title">Ничего не нашли</p>
+                    <p class="empty__text">Попробуйте сбросить фильтры или поискать другое.</p>
+                    <button class="btn btn--ghost" type="button" @onclick="ResetFilters">Сбросить фильтры</button>
+                </div>
+            }
+            else
+            {
+                <p class="catalog__count">Найдено: @_products.Count</p>
+                <div class="product-grid">
+                    @foreach (var p in _products)
+                    {
+                        <ProductCard Product="p" />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "category")]
+    public string? SelectedCategory { get; set; }
+
+    [SupplyParameterFromQuery(Name = "q")]
+    public string? QueryString { get; set; }
+
+    private IReadOnlyList<Category>? _categories;
+    private IReadOnlyList<Product>? _products;
+    private string _search = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryRepo.GetAllAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _search = QueryString ?? string.Empty;
+        _products = await ProductRepo.GetAllAsync(SelectedCategory, _search);
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+        _products = await ProductRepo.GetAllAsync(SelectedCategory, _search);
+    }
+
+    private void Filter(string? slug)
+    {
+        var uri = string.IsNullOrEmpty(slug) ? "/catalog" : $"/catalog?category={slug}";
+        Nav.NavigateTo(uri);
+    }
+
+    private void ResetFilters()
+    {
+        _search = string.Empty;
+        Nav.NavigateTo("/catalog");
+    }
+}

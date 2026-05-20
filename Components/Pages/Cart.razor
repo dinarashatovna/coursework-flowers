@@ -1,0 +1,129 @@
+@page "/cart"
+@inject CartService CartSvc
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Корзина — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    <header class="page-head">
+        <h1 class="page-head__title">Корзина</h1>
+        <p class="page-head__lead">Проверьте состав букетов перед оформлением.</p>
+    </header>
+
+    @if (CartSvc.Lines.Count == 0)
+    {
+        <div class="empty">
+            <p class="empty__title">Пока пусто</p>
+            <p class="empty__text">Загляните в каталог — наверняка найдётся что-то по душе.</p>
+            <a class="btn btn--primary" href="/catalog">В каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="cart">
+            <ul class="cart__list">
+                @foreach (var line in CartSvc.Lines)
+                {
+                    <li class="cart__item" @key="line.ProductId">
+                        <a class="cart__media" href="/product/@line.ProductSlug">
+                            <img src="@line.MainImage" alt="@line.ProductName" loading="lazy" />
+                        </a>
+                        <div class="cart__info">
+                            <a class="cart__name" href="/product/@line.ProductSlug">@line.ProductName</a>
+                            <span class="cart__unit">@line.UnitPrice.ToString("0") ₽ / шт.</span>
+                        </div>
+                        <div class="cart__qty">
+                            <div class="qty">
+                                <button class="qty__btn" type="button" @onclick="@(() => Dec(line))">−</button>
+                                <span class="qty__value">@line.Quantity</span>
+                                <button class="qty__btn" type="button" @onclick="@(() => Inc(line))">+</button>
+                            </div>
+                        </div>
+                        <div class="cart__line-total">@line.LineTotal.ToString("0") ₽</div>
+                        <button class="cart__remove" type="button"
+                                @onclick="@(() => AskRemove(line))" aria-label="Удалить из корзины">
+                            ✕
+                        </button>
+                    </li>
+                }
+            </ul>
+
+            <aside class="cart__summary">
+                <h2>Итого</h2>
+                <div class="cart__row">
+                    <span>Позиций</span>
+                    <span>@CartSvc.ItemsCount</span>
+                </div>
+                <div class="cart__row cart__row--total">
+                    <span>К оплате</span>
+                    <span>@CartSvc.Total.ToString("0") ₽</span>
+                </div>
+                <button class="btn btn--primary btn--lg btn--block" type="button" @onclick="GoCheckout">
+                    Оформить заказ
+                </button>
+                <button class="btn btn--ghost btn--block" type="button" @onclick="AskClear">
+                    Очистить корзину
+                </button>
+            </aside>
+        </div>
+    }
+</section>
+
+<ConfirmModal Visible="_modalVisible"
+              Title="@_modalTitle"
+              Message="@_modalMessage"
+              ConfirmText="Да"
+              CancelText="Отмена"
+              OnConfirmed="ModalConfirm"
+              OnCancelled="ModalCancel" />
+
+@code {
+    private bool _modalVisible;
+    private string _modalTitle = string.Empty;
+    private string _modalMessage = string.Empty;
+    private Action? _modalAction;
+
+    protected override void OnInitialized()
+    {
+        CartSvc.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        CartSvc.OnChange -= StateHasChanged;
+    }
+
+    private void Inc(CartLine line) => CartSvc.SetQuantity(line.ProductId, line.Quantity + 1);
+    private void Dec(CartLine line) => CartSvc.SetQuantity(line.ProductId, line.Quantity - 1);
+
+    private void AskRemove(CartLine line)
+    {
+        _modalTitle = "Удалить букет?";
+        _modalMessage = $"«{line.ProductName}» будет удалён из корзины.";
+        _modalAction = () => CartSvc.Remove(line.ProductId);
+        _modalVisible = true;
+    }
+
+    private void AskClear()
+    {
+        _modalTitle = "Очистить корзину?";
+        _modalMessage = "Все добавленные букеты будут удалены.";
+        _modalAction = () => CartSvc.Clear();
+        _modalVisible = true;
+    }
+
+    private void ModalConfirm()
+    {
+        _modalAction?.Invoke();
+        _modalVisible = false;
+    }
+
+    private void ModalCancel()
+    {
+        _modalAction = null;
+        _modalVisible = false;
+    }
+
+    private void GoCheckout() => Nav.NavigateTo("/checkout");
+}

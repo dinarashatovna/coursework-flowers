@@ -1,0 +1,69 @@
+@page "/order/{OrderId:int}"
+@inject IOrderRepository OrderRepo
+
+<PageTitle>Заказ оформлен — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    @if (_loading)
+    {
+        <p class="muted">Подбираем детали заказа…</p>
+    }
+    else if (_order is null)
+    {
+        <div class="empty">
+            <p class="empty__title">Заказ не найден</p>
+            <a class="btn btn--primary" href="/catalog">В каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="confirm">
+            <div class="confirm__icon" aria-hidden="true">🌸</div>
+            <h1 class="confirm__title">Спасибо, @_order.CustomerName!</h1>
+            <p class="confirm__lead">
+                Заказ №@_order.Id принят. Мы свяжемся с вами по телефону @_order.CustomerPhone
+                и подтвердим время доставки.
+            </p>
+
+            <div class="confirm__details">
+                <h2>Состав заказа</h2>
+                <ul>
+                    @foreach (var item in _order.Items)
+                    {
+                        <li>
+                            <span>@item.ProductNameSnapshot <small>× @item.Quantity</small></span>
+                            <span>@((item.UnitPrice * item.Quantity).ToString("0")) ₽</span>
+                        </li>
+                    }
+                </ul>
+                <div class="cart__row cart__row--total">
+                    <span>Итого</span>
+                    <span>@_order.Total.ToString("0") ₽</span>
+                </div>
+
+                <h2>Доставка</h2>
+                <p>
+                    @_order.ShippingAddress.City, @_order.ShippingAddress.Street,
+                    д. @_order.ShippingAddress.House@(string.IsNullOrEmpty(_order.ShippingAddress.Apartment) ? "" : $", кв. {_order.ShippingAddress.Apartment}"),
+                    индекс @_order.ShippingAddress.PostalCode
+                </p>
+            </div>
+
+            <a class="btn btn--primary btn--lg" href="/catalog">Вернуться в каталог</a>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+
+    private Order? _order;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _order = await OrderRepo.GetByIdAsync(OrderId);
+        _loading = false;
+    }
+}

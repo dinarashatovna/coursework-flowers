@@ -1,0 +1,140 @@
+@page "/product/{Slug}"
+@inject IProductRepository ProductRepo
+@inject CartService Cart
+@inject NavigationManager Nav
+
+<PageTitle>@(_product?.Name ?? "Букет") — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    @if (_loading)
+    {
+        <p class="muted">Загружаем букет…</p>
+    }
+    else if (_product is null)
+    {
+        <div class="empty">
+            <p class="empty__title">Букет не найден</p>
+            <p class="empty__text">Возможно, он уже отправился радовать кого-то другого.</p>
+            <a class="btn btn--primary" href="/catalog">В каталог</a>
+        </div>
+    }
+    else
+    {
+        <nav class="breadcrumbs" aria-label="Хлебные крошки">
+            <a href="/">Главная</a> <span aria-hidden="true">·</span>
+            <a href="/catalog">Каталог</a> <span aria-hidden="true">·</span>
+            <a href="/catalog?category=@_product.Category.Slug">@_product.Category.Name</a> <span aria-hidden="true">·</span>
+            <span>@_product.Name</span>
+        </nav>
+
+        <article class="product">
+            <div class="product__gallery">
+                <div class="product__media">
+                    <img src="@_selectedImage" alt="@_product.Name" />
+                </div>
+                @if (_allImages.Count > 1)
+                {
+                    <div class="product__thumbs" role="list">
+                        @foreach (var img in _allImages)
+                        {
+                            var current = img;
+                            <button type="button"
+                                    role="listitem"
+                                    class="product__thumb @(current == _selectedImage ? "product__thumb--active" : null)"
+                                    @onclick="@(() => SelectImage(current))"
+                                    aria-label="Показать ракурс">
+                                <img src="@current" alt="@_product.Name" loading="lazy" />
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="product__info">
+                <span class="product__category">@_product.Category.IconEmoji @_product.Category.Name</span>
+                <h1 class="product__title">@_product.Name</h1>
+                <p class="product__short">@_product.ShortDescription</p>
+
+                <div class="product__price-row">
+                    <span class="product__price">@_product.Price.ToString("0") ₽</span>
+                    @if (_product.Stock > 0)
+                    {
+                        <span class="badge badge--ok">В наличии</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge--off">Под заказ</span>
+                    }
+                </div>
+
+                <div class="product__buy">
+                    <div class="qty">
+                        <button class="qty__btn" type="button" @onclick="Decrement">−</button>
+                        <span class="qty__value">@_qty</span>
+                        <button class="qty__btn" type="button" @onclick="Increment">+</button>
+                    </div>
+                    <button class="btn btn--primary btn--lg" type="button" @onclick="AddToCart">
+                        Положить в корзину
+                    </button>
+                </div>
+
+                @if (_product.Tags.Count > 0)
+                {
+                    <div class="product__tags">
+                        @foreach (var t in _product.Tags)
+                        {
+                            <span class="chip">#@t.Name</span>
+                        }
+                    </div>
+                }
+
+                <section class="product__description">
+                    <h2>Описание</h2>
+                    <p>@_product.Description</p>
+                </section>
+            </div>
+        </article>
+    }
+</section>
+
+@code {
+    [Parameter] public string Slug { get; set; } = string.Empty;
+
+    private Product? _product;
+    private bool _loading = true;
+    private int _qty = 1;
+    private string _selectedImage = string.Empty;
+    private List<string> _allImages = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _product = await ProductRepo.GetBySlugAsync(Slug);
+
+        if (_product is not null)
+        {
+            // Главное фото + дополнительные изображения из галереи (1:N).
+            _allImages = new List<string> { _product.MainImage };
+            _allImages.AddRange(
+                _product.Gallery
+                    .OrderBy(g => g.Order)
+                    .Select(g => g.Url)
+                    .Where(url => !string.IsNullOrWhiteSpace(url)));
+            _selectedImage = _allImages.First();
+        }
+
+        _loading = false;
+    }
+
+    private void Increment() => _qty = Math.Min(_qty + 1, 99);
+    private void Decrement() => _qty = Math.Max(_qty - 1, 1);
+
+    private void SelectImage(string image) => _selectedImage = image;
+
+    private void AddToCart()
+    {
+        if (_product is null) return;
+        Cart.Add(_product, _qty);
+        Nav.NavigateTo("/cart");
+    }
+}

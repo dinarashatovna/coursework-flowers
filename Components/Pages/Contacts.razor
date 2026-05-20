@@ -1,0 +1,39 @@
+@page "/contacts"
+@inject IConfiguration Config
+
+<PageTitle>Контакты — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    <header class="page-head">
+        <h1 class="page-head__title">Контакты</h1>
+        <p class="page-head__lead">Мы на связи каждый день с 9:00 до 21:00.</p>
+    </header>
+
+    <div class="contacts">
+        <div class="contacts__item">
+            <span class="contacts__label">Телефон</span>
+            <a class="contacts__value" href="tel:@_phone">@_phone</a>
+        </div>
+        <div class="contacts__item">
+            <span class="contacts__label">Почта</span>
+            <a class="contacts__value" href="mailto:@_email">@_email</a>
+        </div>
+        <div class="contacts__item">
+            <span class="contacts__label">Адрес мастерской</span>
+            <span class="contacts__value">@_address</span>
+        </div>
+    </div>
+</section>
+
+@code {
+    private string _phone = string.Empty;
+    private string _email = string.Empty;
+    private string _address = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _phone = Config["Shop:Phone"] ?? "";
+        _email = Config["Shop:Email"] ?? "";
+        _address = Config["Shop:Address"] ?? "";
+    }
+}

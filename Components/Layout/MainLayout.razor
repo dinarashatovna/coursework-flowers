@@ -1,0 +1,75 @@
+@inherits LayoutComponentBase
+@inject CartService Cart
+@implements IDisposable
+
+<div class="page page--with-sidebar">
+    <aside class="sidebar">
+        <a href="/" class="sidebar__brand" aria-label="На главную">
+            <span class="sidebar__flower" aria-hidden="true">❀</span>
+            <span class="sidebar__name">
+                Прогулка<br />
+                <span class="sidebar__name-accent">по&nbsp;саду</span>
+            </span>
+        </a>
+
+        <nav class="sidebar__nav" aria-label="Основная навигация">
+            <NavLink href="/" Match="NavLinkMatch.All" class="sidebar__link">
+                <span class="sidebar__link-icon" aria-hidden="true">⌂</span>
+                Главная
+            </NavLink>
+            <NavLink href="/catalog" class="sidebar__link">
+                <span class="sidebar__link-icon" aria-hidden="true">✿</span>
+                Каталог
+            </NavLink>
+            <NavLink href="/about" class="sidebar__link">
+                <span class="sidebar__link-icon" aria-hidden="true">♡</span>
+                О магазине
+            </NavLink>
+            <NavLink href="/contacts" class="sidebar__link">
+                <span class="sidebar__link-icon" aria-hidden="true">✉</span>
+                Контакты
+            </NavLink>
+        </nav>
+
+        <a href="/cart" class="sidebar__cart" aria-label="Открыть корзину">
+            <span class="sidebar__cart-icon" aria-hidden="true">🧺</span>
+            <span class="sidebar__cart-text">Корзина</span>
+            @if (Cart.ItemsCount > 0)
+            {
+                <span class="sidebar__cart-badge">@Cart.ItemsCount</span>
+            }
+        </a>
+    </aside>
+
+    <div class="page__body">
+        <main class="site-main">
+            @Body
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-inner">
+                <div>
+                    <p class="footer-brand">Прогулка по саду</p>
+                    <p class="footer-tagline">Букеты с настроением летнего сада · 2026</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/catalog">Каталог</a>
+                    <a href="/about">О магазине</a>
+                    <a href="/contacts">Контакты</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Cart.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Cart.OnChange -= StateHasChanged;
+    }
+}

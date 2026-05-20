@@ -1,0 +1,88 @@
+@page "/"
+@inject ICategoryRepository CategoryRepo
+
+<PageTitle>Прогулка по саду — букеты с настроением</PageTitle>
+
+<section class="hero">
+    <div class="container hero__inner">
+        <div class="hero__copy">
+            <p class="hero__eyebrow">Флористическая мастерская · Москва</p>
+            <h1 class="hero__title">
+                Прогулка<br />
+                <span class="hero__title-accent">по&nbsp;саду</span>
+            </h1>
+            <p class="hero__lead">
+                Подбираем букеты, как составляют сад: по настроению, цвету и сезону.
+                Доставим в день заказа в нежной авторской упаковке.
+            </p>
+            <div class="hero__actions">
+                <a href="/catalog" class="btn btn--primary btn--lg">Открыть каталог</a>
+                <a href="/about" class="btn btn--ghost btn--lg">О мастерской</a>
+            </div>
+        </div>
+
+        <div class="hero__art" aria-hidden="true">
+            <div class="hero__tile hero__tile--lg">
+                <img src="/images/products/oblako-pionov.png" alt="Облако пионов" />
+            </div>
+            <div class="hero__tile hero__tile--mint">
+                <img src="/images/products/lavandovoe-pole.png" alt="Лавандовое поле" />
+            </div>
+            <div class="hero__tile hero__tile--cream">
+                <img src="/images/products/nezhnye-tulpany.png" alt="Нежные тюльпаны" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="container section">
+    <header class="section__head">
+        <h2 class="section__title">Категории</h2>
+        <a href="/catalog" class="section__more">Смотреть все →</a>
+    </header>
+
+    @if (_categories is null)
+    {
+        <p class="muted">Загружаем сад…</p>
+    }
+    else
+    {
+        <div class="categories">
+            @foreach (var c in _categories)
+            {
+                <a class="category-card" href="/catalog?category=@c.Slug">
+                    <span class="category-card__icon" aria-hidden="true">@c.IconEmoji</span>
+                    <span class="category-card__name">@c.Name</span>
+                    <span class="category-card__desc">@c.Description</span>
+                </a>
+            }
+        </div>
+    }
+</section>
+
+<section class="container section promise">
+    <div class="promise__item">
+        <span class="promise__icon" aria-hidden="true">⏱️</span>
+        <h3 class="promise__title">Доставка в день заказа</h3>
+        <p class="promise__text">По Москве — в течение 2–3 часов.</p>
+    </div>
+    <div class="promise__item">
+        <span class="promise__icon" aria-hidden="true">🌿</span>
+        <h3 class="promise__title">Свежесть 7 дней</h3>
+        <p class="promise__text">Каждый букет проходит проверку и заменяется бесплатно, если что-то пойдёт не так.</p>
+    </div>
+    <div class="promise__item">
+        <span class="promise__icon" aria-hidden="true">🎁</span>
+        <h3 class="promise__title">Сюрпризы в каждом заказе</h3>
+        <p class="promise__text">К букету — открытка.</p>
+    </div>
+</section>
+
+@code {
+    private IReadOnlyList<Category>? _categories;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryRepo.GetAllAsync();
+    }
+}

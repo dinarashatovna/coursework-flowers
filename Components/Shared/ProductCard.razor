@@ -1,0 +1,33 @@
+@inject CartService Cart
+
+<article class="product-card">
+    <a class="product-card__media" href="/product/@Product.Slug" aria-label="Подробнее: @Product.Name">
+        <img src="@Product.MainImage" alt="@Product.Name" loading="lazy" />
+        @if (Product.IsFeatured)
+        {
+            <span class="product-card__badge">хит</span>
+        }
+    </a>
+    <div class="product-card__body">
+        <span class="product-card__category">@Product.Category.IconEmoji @Product.Category.Name</span>
+        <h3 class="product-card__title">
+            <a href="/product/@Product.Slug">@Product.Name</a>
+        </h3>
+        <p class="product-card__desc">@Product.ShortDescription</p>
+        <div class="product-card__footer">
+            <span class="product-card__price">@Product.Price.ToString("0") ₽</span>
+            <button class="btn btn--primary btn--sm" type="button" @onclick="AddToCart">
+                В корзину
+            </button>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public Product Product { get; set; } = null!;
+
+    private void AddToCart()
+    {
+        Cart.Add(Product);
+    }
+}

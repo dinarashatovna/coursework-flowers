@@ -1,0 +1,172 @@
+@page "/checkout"
+@inject CartService CartSvc
+@inject IOrderRepository OrderRepo
+@inject NavigationManager Nav
+@inject FluentValidation.IValidator<CheckoutFormModel> Validator
+
+<PageTitle>Оформление заказа — Прогулка по саду</PageTitle>
+
+<section class="container section">
+    <header class="page-head">
+        <h1 class="page-head__title">Оформление заказа</h1>
+        <p class="page-head__lead">Расскажите, куда привезти ваш букет.</p>
+    </header>
+
+    @if (CartSvc.Lines.Count == 0)
+    {
+        <div class="empty">
+            <p class="empty__title">Корзина пуста</p>
+            <p class="empty__text">Сначала выберите букет в каталоге.</p>
+            <a class="btn btn--primary" href="/catalog">В каталог</a>
+        </div>
+    }
+    else
+    {
+        <div class="checkout">
+            <EditForm Model="_form" OnValidSubmit="HandleSubmit" FormName="checkout-form" class="checkout__form">
+                <h2>Получатель</h2>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Имя</span>
+                        <InputText class="input" @bind-Value="_form.Name" />
+                        @if (_errors.TryGetValue(nameof(_form.Name), out var nameErr))
+                        { <small class="field__error">@nameErr</small> }
+                    </label>
+                    <label class="field">
+                        <span>Телефон</span>
+                        <InputText class="input" @bind-Value="_form.Phone" />
+                        @if (_errors.TryGetValue(nameof(_form.Phone), out var phoneErr))
+                        { <small class="field__error">@phoneErr</small> }
+                    </label>
+                    <label class="field field--full">
+                        <span>Email</span>
+                        <InputText class="input" @bind-Value="_form.Email" />
+                        @if (_errors.TryGetValue(nameof(_form.Email), out var emailErr))
+                        { <small class="field__error">@emailErr</small> }
+                    </label>
+                </div>
+
+                <h2>Адрес доставки</h2>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Город</span>
+                        <InputText class="input" @bind-Value="_form.City" />
+                        @if (_errors.TryGetValue(nameof(_form.City), out var cityErr))
+                        { <small class="field__error">@cityErr</small> }
+                    </label>
+                    <label class="field">
+                        <span>Индекс</span>
+                        <InputText class="input" @bind-Value="_form.PostalCode" />
+                        @if (_errors.TryGetValue(nameof(_form.PostalCode), out var pcErr))
+                        { <small class="field__error">@pcErr</small> }
+                    </label>
+                    <label class="field field--full">
+                        <span>Улица</span>
+                        <InputText class="input" @bind-Value="_form.Street" />
+                        @if (_errors.TryGetValue(nameof(_form.Street), out var streetErr))
+                        { <small class="field__error">@streetErr</small> }
+                    </label>
+                    <label class="field">
+                        <span>Дом</span>
+                        <InputText class="input" @bind-Value="_form.House" />
+                        @if (_errors.TryGetValue(nameof(_form.House), out var houseErr))
+                        { <small class="field__error">@houseErr</small> }
+                    </label>
+                    <label class="field">
+                        <span>Квартира</span>
+                        <InputText class="input" @bind-Value="_form.Apartment" />
+                    </label>
+                    <label class="field field--full">
+                        <span>Комментарий (по желанию)</span>
+                        <InputTextArea class="input" rows="3" @bind-Value="_form.Comment" />
+                    </label>
+                </div>
+
+                <button class="btn btn--primary btn--lg btn--block" type="submit" disabled="@_submitting">
+                    @(_submitting ? "Отправляем…" : "Подтвердить заказ")
+                </button>
+            </EditForm>
+
+            <aside class="checkout__summary">
+                <h2>Ваш букет</h2>
+                <ul class="checkout__items">
+                    @foreach (var line in CartSvc.Lines)
+                    {
+                        <li>
+                            <span>@line.ProductName <small>× @line.Quantity</small></span>
+                            <span>@line.LineTotal.ToString("0") ₽</span>
+                        </li>
+                    }
+                </ul>
+                <div class="cart__row cart__row--total">
+                    <span>Итого</span>
+                    <span>@CartSvc.Total.ToString("0") ₽</span>
+                </div>
+            </aside>
+        </div>
+    }
+</section>
+
+@code {
+    private CheckoutFormModel _form = new();
+    private Dictionary<string, string> _errors = new();
+    private bool _submitting;
+
+    private async Task HandleSubmit()
+    {
+        _errors = new();
+        var result = await Validator.ValidateAsync(_form);
+        if (!result.IsValid)
+        {
+            foreach (var err in result.Errors)
+            {
+                if (!_errors.ContainsKey(err.PropertyName))
+                {
+                    _errors[err.PropertyName] = err.ErrorMessage;
+                }
+            }
+            return;
+        }
+
+        if (CartSvc.Lines.Count == 0)
+        {
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            var order = new Order
+            {
+                CustomerName = _form.Name,
+                CustomerPhone = _form.Phone,
+                CustomerEmail = _form.Email,
+                Comment = _form.Comment,
+                Total = CartSvc.Total,
+                ShippingAddress = new ShippingAddress
+                {
+                    City = _form.City,
+                    Street = _form.Street,
+                    House = _form.House,
+                    Apartment = _form.Apartment,
+                    PostalCode = _form.PostalCode
+                },
+                Items = CartSvc.Lines.Select(l => new OrderItem
+                {
+                    ProductId = l.ProductId,
+                    ProductNameSnapshot = l.ProductName,
+                    UnitPrice = l.UnitPrice,
+                    Quantity = l.Quantity
+                }).ToList()
+            };
+
+            var saved = await OrderRepo.CreateAsync(order);
+            CartSvc.Clear();
+            Nav.NavigateTo($"/order/{saved.Id}");
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}
